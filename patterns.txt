@@ -1,0 +1,58 @@
+//
+//  Information retrieval course
+//  First version: Johan Boye 2016
+//
+// In this file you can put your regular expressions
+// for matching non-standard words (like mail addresses).
+//
+// As you have probably already understood, lines beginning
+// with "//" are comments.
+
+// Twenty-four seven
+
+
+// binded words : word- word
+([a-z]+-)+[a-z]+
+
+// Clitics she's, 'em, 
+[a-z]*'[a-z]+$
+
+//HTTP very bad /[^\s]* Looks more multiple chars that are not whitespace
+
+// ^ start
+^(http|https):\/\/([%\w.-]+)(:[0-9]+)?(\/[^\s]*)?
+
+
+
+// (http|https):\/\/([a-zA-Z0-9\.]+)*(:[0-9]+)?((\/[a-zA-Z0-9\.%_\=\+&\-\,@\!\:\;]+)*)?((\/)?[\?|#])?(([a-zA-Z0-9\.%_\=\+&\-\,@\!\:\;]+)*)?([\?|#])?(([a-zA-Z0-9\.%_\=\+&\-\,@\!\:\;]+)*)?\/?
+
+// s any char that is not white space
+// E-mails
+\S+@[a-z.]+
+
+
+// File Types
+\w+\.(txt|ppt|doc|xlsx)
+
+
+// Abbreviations (e.g. u.s.)
+[a-z]+[.][a-z]+[.]
+
+
+
+// IPs n numbers and stuff
+(\d+[,.-])+\d+
+\d+[-][x]+
+
+
+
+//numbers with symbols infront 
+\b[¢$\+][0-9]+([\-\.]?[0-9]+)*\b
+
+[¢$\+][0-9]+([\-\.]?[0-9]+)*
+
+// Hours
+\d+[:]\d+[:]\d+
+
+// Twenty-four seven
+\d+/\d+
