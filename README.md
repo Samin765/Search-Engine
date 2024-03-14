@@ -2,4 +2,3 @@
 
 Search Engine (WIP)
 
-* Currently implementing PageRank etc
