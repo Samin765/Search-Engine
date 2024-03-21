@@ -2,16 +2,48 @@ package ir;
 
 import java.util.*;
 
+import java.io.*;
+import java.util.*;
+import java.lang.Math;
+
+import javax.lang.model.util.ElementScanner6;
+
 
 public class Searcher {
 
     Index index;
 
     KGramIndex kgIndex;
+    HashMap<Integer, Double> pageRanks = new HashMap<Integer, Double>();
 
     public Searcher(Index index, KGramIndex kgIndex) {
         this.index = index;
         this.kgIndex = kgIndex;
+        try {
+            File file = new File("/Users/samin/InfoRet/assignment2/pagerank/pageRanks.txt");
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split("\t");
+                if (parts.length >= 2) {
+                    String docID = parts[0].trim();
+                    int id = Integer.parseInt((docID));
+                    // Replace comma with dot for decimal parsing
+                    String pgMaptr = parts[1].replace(',', '.');
+                    //System.out.println(docID);
+                    //System.out.println(pgMaptr);
+                    Double pageRank = Double.parseDouble(pgMaptr.trim());
+                    pageRanks.put(id, pageRank);
+                }
+            }
+            System.out.println(pageRanks.get(3));
+
+            System.out.println("READ pageRanks" + pageRanks.size());
+            reader.close();
+        } catch (IOException e) {
+            System.err.println("Error reading file " + "/Users/samin/InfoRet/assignment2/pagerank/pageRanks.txt");
+            e.printStackTrace();
+        }
     }
 
     private PostingsList positionalIntersect(PostingsList pl1, PostingsList pl2) {
@@ -63,6 +95,8 @@ public class Searcher {
         return answer;
     }
 
+
+
     private PostingsList intersect(PostingsList pl1, PostingsList pl2) {
         PostingsList answer = new PostingsList();
 
@@ -97,22 +131,211 @@ public class Searcher {
         return answer;
     }
 
-    public PostingsList search(Query query, QueryType queryType, RankingType rankingType, NormalizationType normtype) {
+    private HashMap<Integer,Double> docTfIdf(PostingsList pl, String term){
+        HashMap<Integer,Double> docs_tf_idf = new HashMap<Integer,Double>();
 
-        if (query.queryterm.size() > 1) { // If a phrase
+        for (int i = 0; i < pl.size() ; i ++){
+            double doc_tf = pl.get(i).offsets.size();
+            double doc_idf = Math.log(index.docLengths.size()/pl.size());
+            double doc_tf_idf = (doc_tf * doc_idf) / index.docLengths.get(pl.get(i).docID);
+
+            docs_tf_idf.put(pl.get(i).docID, doc_tf_idf);
+        }
+
+        return docs_tf_idf;
+    }
+
+    private Double cosSimiliarity(double docs_tf_idf, double query_tf_idf){
+        return docs_tf_idf *   query_tf_idf;
+    }
+
+    private PostingsList ranked(PostingsList pl , String term){
+
+        // 1. Calculate the tf_idf vector of query term
+        double query_tf= 1;
+        double query_idf = Math.log(index.docLengths.size()/pl.size());
+        double query_tf_idf = query_tf * query_idf;
+
+        // 2. Find Matching Documents 
+        // 3. Calculate tf_idf-Vectors for all Matching Documents
+        HashMap<Integer,Double> docs_tf_idf = docTfIdf(pl, term);
+        for(int i = 0; i < docs_tf_idf.size(); i ++){
+            pl.get(i).score = cosSimiliarity(docs_tf_idf.get(pl.get(i).docID), query_tf_idf);
+        }
+        // 4. Compute Cosin Similiarty between all tf_idc Vectors found and add it the score field in their PostingsEntry
+        // 5. Sort the list based on the score
+        Collections.sort(pl.getEntries());
+
+        return pl;
+    }
+
+    private PostingsList sortScore(PostingsList pl, int N){
+
+        int tf = 0; //number of occurrences of t in d       
+        int df_t = 0; //number of documents in the corpus which contain t
+        int lengthOfDocd = 0; //number of words in d
+        double tf_idf = 0.0;
+        double idf = 0.0;
+
+        // for each PE in my PL, calculate the score and find tf_idf for each PE
+        for(int i=0; i<pl.size(); i++){
+            tf = pl.get(i).offsets.size();
+            df_t = pl.size();
+            lengthOfDocd = index.docLengths.get(pl.get(i).docID);
+            idf = java.lang.Math.log((double)N/(double)df_t);
+
+            tf_idf = (tf * idf)/lengthOfDocd;
+            pl.get(i).score = tf_idf;
+            
+        }
+
+        // sort my PL according to score
+        Collections.sort(pl.getEntries());
+        return pl;
+
+    }
+
+    public PostingsList search(ir.Query query, QueryType queryType, RankingType rankingType, NormalizationType normtype) {
+
+        if (query.queryterm.size() > 1 && (queryType == QueryType.INTERSECTION_QUERY) || (queryType == QueryType.PHRASE_QUERY))  { // If a phrase
             PostingsList pl = index.getPostings(query.queryterm.get(0).term); // Get Postings for the first term
 
             for (int i = 1; i < query.queryterm.size(); i++) { // Go through the whole list of term
                 String term = query.queryterm.get(i).term;  // Get the Term
 
                 PostingsList plNext = index.getPostings(term); // Get the postingsList of the next Terms
+
+    
                 pl = queryType == QueryType.INTERSECTION_QUERY // Check if we want InterSection
                 ? intersect(pl, plNext) : // Do InterSection
                 positionalIntersect(pl, plNext); //Otherwise do positionalIntersection i.e Phrase Query
+                
             }
             return pl; // Returns the PL
-        } else {
+        } else if(queryType == QueryType.RANKED_QUERY && (rankingType == RankingType.TF_IDF)) {
+
+            if(query.queryterm.size() == 1){   //if only a word
+                String token = query.queryterm.get(0).term; // get term
+
+            
+            PostingsList pl = sortScore(index.getPostings(token), index.docLengths.size()); //sort
+            return pl;
+            }
+            else{
+                
+                ArrayList<String> terms = new ArrayList<String>();  // List that holds all terms
+
+                for (int i=0;i<query.queryterm.size();i++) {
+                    terms.add(query.queryterm.get(i).term);  // Gets all terms in order
+                }
+
+                PostingsList result = new PostingsList();  // Result PL 
+
+                for (int counter=0;counter<query.queryterm.size();counter++) {  //Process all terms
+                    PostingsList wordPostingList = sortScore(index.getPostings(terms.get(counter)),Index.docLengths.size());  // Sort  with score
+    
+                    for (PostingsEntry pe : wordPostingList.getEntries()) {  // Go through entries
+                        PostingsEntry existingEntry = result.search(pe.docID);  // Go through the list
+                        if (existingEntry == null) {
+                            result.add(new PostingsEntry(pe.docID, pe.score));   // Make new entry with score
+                        } else {
+                            existingEntry.score += pe.score;   // ADd the score if already exist
+                        }
+                    }
+                }
+
+                Collections.sort(result.getEntries());   // Sort it 
+            return result;
+        
+            }
+                
+            
+        }
+        else if(query.queryterm.size() >= 1 && (queryType == QueryType.RANKED_QUERY) && (rankingType == RankingType.PAGERANK))
+        {
+
+           ArrayList<String> terms = new ArrayList<String>();   
+
+           for (int i=0;i<query.queryterm.size();i++) {
+               terms.add(query.queryterm.get(i).term);  // get Terms 
+           }
+          
+           PostingsList result = new PostingsList();
+
+           for (int i=0;i<query.queryterm.size();i++) {
+               PostingsList wordPostingList = index.getPostings(terms.get(i));  // Goes through every terms
+
+               for (PostingsEntry pe : wordPostingList.getEntries()) {  // Get the PostingsEntries for the term
+                   PostingsEntry existingEntry = result.search(pe.docID);  // search for postingEntry with docID
+
+                   if (existingEntry == null) {  // if it dosnt exist just create a new entry with the pageRank values
+                       
+                       result.add(new PostingsEntry( 
+                                    pe.docID,pageRanks.get(pe.docID)) );
+                   } else {
+                       
+                       existingEntry.score = pageRanks.get(pe.docID);  //add the pageRank value to existing Entry
+
+                   }
+               }
+           }
+
+           Collections.sort(result.getEntries());  //sort
+           return result;  
+
+            
+
+
+        }
+
+        else if(query.queryterm.size() >= 1 && (queryType == QueryType.RANKED_QUERY) && (rankingType == RankingType.COMBINATION))
+        {
+           ArrayList<String> terms = new ArrayList<String>();        
+
+           for (int i=0;i<query.queryterm.size();i++) {
+               terms.add(query.queryterm.get(i).term);  // Get all terms
+           }
+       
+           PostingsList result = new PostingsList();
+
+           for (int i=0; i<query.queryterm.size(); i++) { // go through all terms
+               PostingsList wordPostingList = sortScore(index.getPostings(terms.get(i)),Index.docLengths.size()); // Get the PL based on score
+
+               for (PostingsEntry pe : wordPostingList.getEntries()) {
+                   PostingsEntry existingEntry = result.search(pe.docID);  // Search for entries in the PL 
+                   if (existingEntry == null) {
+                       result.add(new PostingsEntry(pe.docID, 0.6*pageRanks.get(pe.docID) + 0.4*pe.score)); // Combine pagerank and Score
+
+                   } else {
+
+                       existingEntry.score += 0.6*pe.score+ 0.4*pageRanks.get(pe.docID);
+                   }
+               }
+           }
+
+           Collections.sort(result.getEntries());
+           return result;
+
+        }
+
+        else {
             return index.getPostings(query.queryterm.get(0).term); //If 1 word just return PL from index
+        }
+    }
+
+    HashMap<Integer, Double> docpgMap = new HashMap<>();
+
+    void readpgMap(String filename) {
+        try {
+            Scanner sc = new Scanner(new File(filename));
+            while (sc.hasNextLine()) {
+                int docID = sc.nextInt();
+                double score = sc.nextDouble();
+                docpgMap.put(docID, score);
+            }
+            sc.close();
+        } catch (FileNotFoundException e) {
+            System.err.println("Error reading PageRank file: " + filename);
         }
     }
 }
