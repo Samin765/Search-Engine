@@ -12,7 +12,6 @@ public class Engine {
 
     /** The inverted index. */
     Index index = new HashedIndex();
-    // Assignment 1.7: Comment the line above and uncomment the next line
     //Index index = new PersistentHashedIndex();
 
     /** The indexer creating the search index. */
@@ -23,12 +22,10 @@ public class Engine {
 
     /** K-gram index */
     KGramIndex kgIndex = null;
-    // Assignment 3: Comment the line above and uncomment the next line
     // KgramIndex kgIndex = new KGramIndex(2);
 
     /** Spell checker */
     SpellChecker speller;
-    // Assignment 3: Comment the line above and uncomment the next line
     // SpellChecker = new SpellChecker( index, kgIndex );
     
     /** The engine GUI. */
@@ -69,8 +66,7 @@ public class Engine {
         /* 
          *   Calls the indexer to index the chosen directory structure.
          *   Access to the index is synchronized since we don't want to 
-         *   search at the same time we're indexing new files (this might 
-         *   corrupt the index).
+         *   search at the same time we're indexing new files 
          */
         if (is_indexing) {
             synchronized ( indexLock ) {
@@ -142,4 +138,5 @@ public class Engine {
     }
 
 }
+
 
