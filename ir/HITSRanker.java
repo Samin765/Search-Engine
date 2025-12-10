@@ -42,27 +42,7 @@ public class HITSRanker {
     
     /* --------------------------------------------- */
 
-    /**
-     * Constructs the HITSRanker object
-     * 
-     * A set of linked documents can be presented as a graph.
-     * Each page is a node in graph with a distinct nodeID associated with it.
-     * There is an edge between two nodes if there is a link between two pages.
-     * 
-     * Each line in the links file has the following format:
-     *  nodeID;outNodeID1,outNodeID2,...,outNodeIDK
-     * This means that there are edges between nodeID and outNodeIDi, where i is between 1 and K.
-     * 
-     * Each line in the titles file has the following format:
-     *  nodeID;pageTitle
-     *  
-     * NOTE: nodeIDs are consistent between these two files, but they are NOT the same
-     *       as docIDs used by search engine's Indexer
-     *
-     * @param      linksFilename   File containing the links of the graph
-     * @param      titlesFilename  File containing the mapping between nodeIDs and pages titles
-     * @param      index           The inverted index
-     */
+
     public HITSRanker( String linksFilename, String titlesFilename, Index index ) {
         this.index = index;
         readDocs( linksFilename, titlesFilename );
@@ -71,15 +51,7 @@ public class HITSRanker {
 
     /* --------------------------------------------- */
 
-    /**
-     * A utility function that gets a file name given its path.
-     * For example, given the path "davisWiki/hello.f",
-     * the function will return "hello.f".
-     *
-     * @param      path  The file path
-     *
-     * @return     The file name.
-     */
+
     private String getFileName( String path ) {
         String result = "";
         StringTokenizer tok = new StringTokenizer( path, "\\/" );
@@ -90,38 +62,18 @@ public class HITSRanker {
     }
 
 
-    /**
-     * Reads the files describing the graph of the given set of pages.
-     *
-     * @param      linksFilename   File containing the links of the graph
-     * @param      titlesFilename  File containing the mapping between nodeIDs and pages titles
-     */
+
     void readDocs( String linksFilename, String titlesFilename ) {
-        //
-        // YOUR CODE HERE
-        //
+         //wip
     }
 
-    /**
-     * Perform HITS iterations until convergence
-     *
-     * @param      titles  The titles of the documents in the root set
-     */
+
     private void iterate(String[] titles) {
-        //
-        // YOUR CODE HERE
-        //
+          //wip
     }
 
 
-    /**
-     * Rank the documents in the subgraph induced by the documents present
-     * in the postings list `post`.
-     *
-     * @param      post  The list of postings fulfilling a certain information need
-     *
-     * @return     A list of postings ranked according to the hub and authority scores.
-     */
+
     PostingsList rank(PostingsList post) {
         //
         // YOUR CODE HERE
@@ -130,13 +82,7 @@ public class HITSRanker {
     }
 
 
-    /**
-     * Sort a hash map by values in the descending order
-     *
-     * @param      map    A hash map to sorted
-     *
-     * @return     A hash map sorted by values
-     */
+
     private HashMap<Integer,Double> sortHashMapByValue(HashMap<Integer,Double> map) {
         if (map == null) {
             return null;
@@ -158,13 +104,7 @@ public class HITSRanker {
     } 
 
 
-    /**
-     * Write the first `k` entries of a hash map `map` to the file `fname`.
-     *
-     * @param      map        A hash map
-     * @param      fname      The filename
-     * @param      k          A number of entries to write
-     */
+
     void writeToFile(HashMap<Integer,Double> map, String fname, int k) {
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter(fname));
@@ -182,11 +122,7 @@ public class HITSRanker {
     }
 
 
-    /**
-     * Rank all the documents in the links file. Produces two files:
-     *  hubs_top_30.txt with documents containing top 30 hub scores
-     *  authorities_top_30.txt with documents containing top 30 authority scores
-     */
+
     void rank() {
         iterate(titleToId.keySet().toArray(new String[0]));
         HashMap<Integer,Double> sortedHubs = sortHashMapByValue(hubs);
@@ -208,4 +144,5 @@ public class HITSRanker {
             hr.rank();
         }
     }
+
 } 
